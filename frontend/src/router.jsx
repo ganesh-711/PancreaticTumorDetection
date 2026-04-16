@@ -7,6 +7,8 @@ import ScanUpload from "./pages/ScanUpload";
 import Result from "./pages/Result";
 import Suggestions from "./pages/Suggestions";
 import About from "./pages/About";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +42,14 @@ export const router = createBrowserRouter([
       {
         path: "/result",
         element: <Result />,
+      },
+      {
+        path: "/login",
+        element: <Login />,
+      },
+      {
+        path: "/register",
+        element: <Register />,
       },
     ],
   },

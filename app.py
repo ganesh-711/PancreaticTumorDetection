@@ -6,6 +6,9 @@ import torch
 from PIL import Image
 from torchvision import transforms
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # =======================
 # PATHS & IMPORTS
@@ -23,6 +26,22 @@ from src.gradcam import generate_heatmap
 
 app = Flask(__name__)
 CORS(app)   # allow React frontend to access the API
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = 'pancreas-cancer-detection-secret-key'
+
+db = SQLAlchemy(app)
+jwt = JWTManager(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+
+with app.app_context():
+    db.create_all()
 
 UPLOAD_FOLDER = os.path.join(ROOT_DIR, "uploads")
 STATIC_FOLDER = os.path.join(ROOT_DIR, "static")
@@ -51,6 +70,45 @@ transform = transforms.Compose([
 # =======================
 # API ROUTES
 # =======================
+
+@app.route("/api/auth/register", methods=["POST"])
+def register():
+    data = request.get_json()
+    if not data or not data.get("email") or not data.get("password") or not data.get("name"):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    if User.query.filter_by(email=data["email"]).first():
+        return jsonify({"error": "User already exists"}), 400
+
+    hashed_password = generate_password_hash(data["password"])
+    new_user = User(name=data["name"], email=data["email"], password_hash=hashed_password)
+    
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+        return jsonify({"message": "User registered successfully"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Registration failed"}), 500
+
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    if not data or not data.get("email") or not data.get("password"):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    user = User.query.filter_by(email=data["email"]).first()
+    if not user or not check_password_hash(user.password_hash, data["password"]):
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    # You can return string 'user.id' or convert it, JWT expects string or serializable
+    access_token = create_access_token(identity=str(user.id))
+    return jsonify({
+        "message": "Login successful",
+        "access_token": access_token,
+        "user": {"name": user.name, "email": user.email}
+    }), 200
+
 
 @app.route("/")
 def home():

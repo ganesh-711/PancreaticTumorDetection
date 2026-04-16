@@ -17,15 +17,31 @@ const NAV_ITEMS = [
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState(null);
   const location = useLocation();
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        try {
+            setUser(JSON.parse(storedUser));
+        } catch(e) {}
+    } else {
+        setUser(null);
+    }
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+  };
 
   const navVariants = {
     hidden: { y: -100, opacity: 0 },
@@ -102,6 +118,17 @@ export default function Navbar() {
             {/* CTA & MOBILE TOGGLE */}
             <div className="flex items-center gap-4 pl-4 lg:pl-8">
                  <div className="hidden lg:flex items-center gap-4">
+                     {user ? (
+                         <>
+                             <span className="text-sm font-medium text-slate-600">Hi, {user.name}</span>
+                             <button onClick={handleLogout} className="text-sm font-bold text-red-500 hover:text-red-600 transition-colors">Logout</button>
+                         </>
+                     ) : (
+                         <>
+                             <Link to="/login" className="text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors">Log In</Link>
+                         </>
+                     )}
+                     <div className="w-px h-6 bg-slate-200"></div>
                      <span className="text-sm font-bold text-slate-900">Start Analysis</span>
                      <Link to="/upload">
                         <motion.button 
@@ -166,8 +193,19 @@ export default function Navbar() {
                       </Link>
                   </motion.div>
                 ))}
-                <motion.div variants={itemVariants} className="pt-4 mt-2 border-t border-slate-100">
-                    <Link to="/upload" onClick={() => setIsOpen(false)} className="flex items-center justify-between p-4 bg-slate-900 rounded-xl group active:scale-95 transition-transform">
+                <motion.div variants={itemVariants} className="pt-4 mt-2 border-t border-slate-100 flex flex-col gap-3">
+                    {user ? (
+                        <div className="flex flex-col gap-2">
+                           <span className="text-slate-600 font-medium px-4">Logged in as {user.name}</span>
+                           <button onClick={handleLogout} className="px-4 py-2 text-left text-red-500 font-medium hover:bg-slate-50 rounded-xl transition-colors">Logout</button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                           <Link to="/login" onClick={() => setIsOpen(false)} className="px-4 py-2 text-slate-700 font-medium hover:bg-slate-50 rounded-xl transition-colors">Log In</Link>
+                           <Link to="/register" onClick={() => setIsOpen(false)} className="px-4 py-2 text-slate-700 font-medium hover:bg-slate-50 rounded-xl transition-colors">Sign Up</Link>
+                        </div>
+                    )}
+                    <Link to="/upload" onClick={() => setIsOpen(false)} className="flex items-center justify-between p-4 bg-slate-900 rounded-xl group active:scale-95 transition-transform mt-2">
                         <span className="font-bold text-white">Start Analysis</span>
                         <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center text-slate-900">
                             <ArrowUpRight size={18} />

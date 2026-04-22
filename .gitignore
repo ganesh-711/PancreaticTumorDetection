@@ -1,2 +1,10 @@
 venv
 node_modules
+instance/
+uploads/
+static/heatmap.jpg
+__pycache__/
+*.pyc
+saved_models/
+outputs/
+.DS_Store
